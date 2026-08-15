@@ -1,0 +1,186 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design tokens.  Colours are space-separated RGB triplets so Tailwind's
+  `rgb(var(--x) / <alpha-value>)` colours support the /opacity modifiers the
+  spec leans on (clay 8%, blocks 12%, done 50%).  Dark mode is a pure token
+  swap — no component needs a `dark:` variant.
+*/
+:root {
+  --paper: 250 249 246;
+  --card: 255 255 255;
+  --ink: 29 27 24;
+  --graphite: 107 101 92;
+  --hairline: 232 228 219;
+  --clay: 193 95 60;
+  --moss: 90 110 79;
+
+  --school: 193 95 60;
+  --charq: 90 110 79;
+  --freelance: 74 96 114;
+  --training: 168 129 58;
+
+  --todaycol: 255 253 248;
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: 23 22 19;
+    --card: 33 31 27;
+    --ink: 242 239 232;
+    --graphite: 154 146 136;
+    --hairline: 48 45 39;
+
+    /* Same hue, lifted ~8% in lightness */
+    --clay: 205 113 80;
+    --moss: 110 132 99;
+    --school: 205 113 80;
+    --charq: 110 132 99;
+    --freelance: 96 117 136;
+    --training: 190 151 82;
+
+    --todaycol: 38 36 30;
+
+    color-scheme: dark;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: rgb(var(--paper));
+  color: rgb(var(--ink));
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Every time or count is tabular */
+  font-variant-numeric: tabular-nums;
+  overscroll-behavior-y: none;
+}
+
+/* The layout is phone-shaped everywhere; kill horizontal scroll on the body. */
+#root {
+  overflow-x: hidden;
+}
+
+/* Tap targets shouldn't flash a grey box on mobile */
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- The one piece of ambient motion: the Now card's draining bar ---- */
+@keyframes deck-drain {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0);
+  }
+}
+
+/* ---- Completion: the row settles into the Done stack with a spring ---- */
+@keyframes deck-collapse {
+  0% {
+    max-height: 56px;
+    opacity: 1;
+    transform: translateY(0);
+  }
+  40% {
+    max-height: 1px;
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    max-height: 1px;
+    opacity: 0;
+    transform: translateY(0);
+  }
+}
+
+.deck-completing {
+  overflow: hidden;
+  animation: deck-collapse 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes deck-settle {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.deck-settling {
+  animation: deck-settle 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Sheets rise from the bottom */
+@keyframes deck-sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.deck-sheet {
+  animation: deck-sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes deck-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.deck-fade {
+  animation: deck-fade-in 180ms ease-out both;
+}
+
+/* Honour the user's motion preference — no drain, no spring, no rise. */
+@media (prefers-reduced-motion: reduce) {
+  .deck-completing,
+  .deck-settling,
+  .deck-sheet,
+  .deck-fade,
+  [data-drain] {
+    animation: none !important;
+  }
+  .deck-completing {
+    display: none;
+  }
+}
+
+/* Thin, quiet scrollbars where they show at all */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--hairline)) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgb(var(--hairline));
+  border-radius: 999px;
+}
+
+/* Native date/time inputs should adopt the app's ink, not chrome blue */
+input[type='date'],
+input[type='time'] {
+  accent-color: rgb(var(--clay));
+  color-scheme: light dark;
+}
