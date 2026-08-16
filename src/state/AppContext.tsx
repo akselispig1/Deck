@@ -50,6 +50,11 @@ interface AppContextValue {
   addCommitment: typeof store.addCommitment
   deleteCommitment: typeof store.deleteCommitment
 
+  // subjects (courses)
+  addCourse: typeof store.addCourse
+  updateCourse: typeof store.updateCourse
+  deleteCourse: typeof store.deleteCourse
+
   // settings
   updateSettings: (patch: Partial<Settings>) => Promise<void>
 
@@ -202,6 +207,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       planWeek: store.planWeek,
       addCommitment: store.addCommitment,
       deleteCommitment: store.deleteCommitment,
+      addCourse: store.addCourse,
+      updateCourse: store.updateCourse,
+      deleteCourse: store.deleteCourse,
       updateSettings,
       calendarConfigured: isCalendarConfigured(),
       calendarConnected,
