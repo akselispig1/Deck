@@ -8,7 +8,10 @@ import { formatDuration, formatShortDate } from './time'
 // than interrupting the user (§8).
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client'
-const SCOPE = 'https://www.googleapis.com/auth/calendar.events'
+// Full calendar scope: needed to create/list the dedicated "Deck" calendar and
+// to read the primary calendar id for the embed — calendar.events alone can't
+// create a calendar (that was the 403 on connect).
+const SCOPE = 'https://www.googleapis.com/auth/calendar'
 const CAL_API = 'https://www.googleapis.com/calendar/v3'
 const CLIENT_ID_KEY = 'deck.googleClientId'
 
@@ -145,6 +148,57 @@ export async function ensureDeckCalendar(existingId?: string): Promise<string> {
     method: 'POST',
     body: JSON.stringify({ summary: 'Deck', description: 'Work sessions planned by Deck.' }),
   })
+  return created.id
+}
+
+// The user's primary calendar id (their email) — used as an embed source.
+export async function getPrimaryCalendarId(): Promise<string> {
+  const cal = await api<{ id: string }>('/calendars/primary')
+  return cal.id
+}
+
+const DAY_CODES = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+
+// Create a recurring weekly event (a commitment: club, sleep, school…) so it
+// shows in the embedded calendar and blocks scheduling. Returns the event id.
+export async function createRecurringCommitment(
+  calendarId: string,
+  label: string,
+  daysOfWeek: number[],
+  startTime: string,
+  endTime: string,
+): Promise<string> {
+  const days = [...daysOfWeek].sort((a, b) => a - b)
+  if (days.length === 0) throw new Error('A commitment needs at least one day')
+  // First occurrence: the next date (from today) whose weekday is in the set.
+  const now = new Date()
+  let first = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  for (let i = 0; i < 7; i++) {
+    if (days.includes(first.getDay())) break
+    first = new Date(first.getFullYear(), first.getMonth(), first.getDate() + 1)
+  }
+  const [sh, sm] = startTime.split(':').map(Number)
+  const [eh, em] = endTime.split(':').map(Number)
+  const start = new Date(first)
+  start.setHours(sh, sm, 0, 0)
+  const end = new Date(first)
+  end.setHours(eh, em, 0, 0)
+  const byday = days.map((d) => DAY_CODES[d]).join(',')
+  const created = await api<{ id: string }>(
+    `/calendars/${encodeURIComponent(calendarId)}/events`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        summary: label,
+        start: { dateTime: start.toISOString() },
+        end: { dateTime: end.toISOString() },
+        recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${byday}`],
+        transparency: 'opaque',
+        colorId: '8', // graphite — reads as "unavailable ground"
+        reminders: { useDefault: false },
+      }),
+    },
+  )
   return created.id
 }
 

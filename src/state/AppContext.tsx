@@ -17,7 +17,6 @@ import { buildSystemPrompt, hasAnthropicKey, runAssistant } from '../lib/anthrop
 import {
   connectCalendar,
   disconnectCalendar,
-  ensureDeckCalendar,
   isCalendarConfigured,
   isCalendarConnected,
 } from '../lib/google'
@@ -46,6 +45,10 @@ interface AppContextValue {
   deleteBlock: typeof store.deleteBlock
   scheduleTask: typeof store.scheduleTask
   planWeek: typeof store.planWeek
+
+  // recurring commitments (clubs, sleep, school…)
+  addCommitment: typeof store.addCommitment
+  deleteCommitment: typeof store.deleteCommitment
 
   // settings
   updateSettings: (patch: Partial<Settings>) => Promise<void>
@@ -107,9 +110,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const connectGoogle = useCallback(async () => {
     await connectCalendar()
-    const current = await getSettings()
-    const calId = await ensureDeckCalendar(current.googleCalendarId)
-    if (calId !== current.googleCalendarId) await persistSettings({ googleCalendarId: calId })
+    // Create/confirm the Deck calendar, learn the primary id for the embed, and
+    // push any commitments/blocks that predate the connection.
+    await store.onCalendarConnected()
     setCalendarConnected(true)
   }, [])
 
@@ -197,6 +200,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       deleteBlock: store.deleteBlock,
       scheduleTask: store.scheduleTask,
       planWeek: store.planWeek,
+      addCommitment: store.addCommitment,
+      deleteCommitment: store.deleteCommitment,
       updateSettings,
       calendarConfigured: isCalendarConfigured(),
       calendarConnected,

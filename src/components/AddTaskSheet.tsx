@@ -33,7 +33,7 @@ function Pill({
       className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-label transition-colors ${
         active ? 'text-white' : 'border border-hairline text-graphite'
       }`}
-      style={active ? { backgroundColor: color ?? laneVar('school') } : undefined}
+      style={active ? { backgroundColor: color ?? 'rgb(var(--primary))' } : undefined}
     >
       {children}
     </button>
@@ -56,6 +56,7 @@ export function AddTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
   const [lane, setLane] = useState<Lane>('school')
   const [dueDate, setDueDate] = useState(() => format(addDays(new Date(), 1), 'yyyy-MM-dd'))
   const [est, setEst] = useState(40)
+  const [description, setDescription] = useState('')
 
   function reset() {
     setTitle('')
@@ -63,6 +64,7 @@ export function AddTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
     setLane('school')
     setDueDate(format(addDays(new Date(), 1), 'yyyy-MM-dd'))
     setEst(40)
+    setDescription('')
   }
 
   async function add() {
@@ -76,6 +78,7 @@ export function AddTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
       type: 'homework',
       dueAt: toISO(due),
       estMinutes: est,
+      notes: description.trim() || undefined,
     })
     // Land it on the calendar straight away so the add feels complete.
     await app.scheduleTask(task.id)
@@ -120,7 +123,7 @@ export function AddTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           </Row>
         )}
 
-        <Row label="Due">
+        <Row label="Deadline">
           <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
             <Pill
               active={dueDate === format(addDays(new Date(), 1), 'yyyy-MM-dd')}
@@ -159,6 +162,16 @@ export function AddTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           </div>
         </Row>
 
+        <Row label="Details">
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder="What's involved? The assistant uses this when it plans your sessions."
+            className="w-full resize-none rounded-control border border-hairline bg-paper px-3 py-2 text-body text-ink placeholder:text-graphite focus:outline-none"
+          />
+        </Row>
+
         {!courseId && (
           <Row label="Lane">
             <div className="flex gap-2 overflow-x-auto pb-1">
@@ -180,8 +193,7 @@ export function AddTaskSheet({ open, onClose }: { open: boolean; onClose: () => 
           <button
             onClick={add}
             disabled={!title.trim()}
-            className="w-full rounded-control py-3 text-label font-medium text-white disabled:opacity-40"
-            style={{ backgroundColor: laneVar('school') }}
+            className="w-full rounded-control bg-primary py-3 text-label font-medium text-white disabled:opacity-40"
           >
             Add
           </button>

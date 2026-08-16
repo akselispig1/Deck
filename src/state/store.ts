@@ -4,11 +4,14 @@ import type { Block, Course, Lane, Task, TaskType } from '../types'
 import { schedule } from '../scheduler/scheduler'
 import {
   createEvent,
+  createRecurringCommitment,
   deleteEvent,
   ensureDeckCalendar,
+  getPrimaryCalendarId,
   isCalendarConnected,
   updateEvent,
 } from '../lib/google'
+import type { Availability, Settings } from '../types'
 import {
   formatShortDate,
   formatTime,
@@ -292,6 +295,74 @@ export async function buildSnapshot(): Promise<StateSnapshot> {
   }
 }
 
+// ---- Commitments (recurring weekly busy time: clubs, sleep, school…) ----
+
+async function pushCommitmentToGoogle(a: Availability): Promise<void> {
+  if (!isCalendarConnected()) return
+  try {
+    const settings = await getSettings()
+    const calId = await ensureDeckCalendar(settings.googleCalendarId)
+    if (calId !== settings.googleCalendarId) await saveSettings({ googleCalendarId: calId })
+    const eventId = await createRecurringCommitment(
+      calId,
+      a.label,
+      a.daysOfWeek,
+      a.startTime,
+      a.endTime,
+    )
+    await db.availability.update(a.id, { googleEventId: eventId })
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn('pushCommitmentToGoogle', err)
+  }
+}
+
+export async function addCommitment(input: {
+  label: string
+  daysOfWeek: number[]
+  startTime: string
+  endTime: string
+}): Promise<Availability> {
+  const a: Availability = {
+    id: newId(),
+    label: input.label.trim() || 'Commitment',
+    daysOfWeek: input.daysOfWeek,
+    startTime: input.startTime,
+    endTime: input.endTime,
+  }
+  await db.availability.add(a)
+  await pushCommitmentToGoogle(a)
+  return a
+}
+
+export async function deleteCommitment(id: string): Promise<void> {
+  const a = await db.availability.get(id)
+  if (!a) return
+  if (a.googleEventId && isCalendarConnected()) {
+    try {
+      const s = await getSettings()
+      if (s.googleCalendarId) await deleteEvent(s.googleCalendarId, a.googleEventId)
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn('deleteCommitment google', err)
+    }
+  }
+  await db.availability.delete(id)
+}
+
+// Run once the user links Google: create/confirm the Deck calendar, learn the
+// primary calendar id (for the embed), and push any commitments that predate
+// the connection so they show in the calendar too.
+export async function onCalendarConnected(): Promise<void> {
+  const settings = await getSettings()
+  const calId = await ensureDeckCalendar(settings.googleCalendarId)
+  const primaryId = await getPrimaryCalendarId()
+  await saveSettings({ googleCalendarId: calId, googlePrimaryId: primaryId })
+  const commitments = await db.availability.toArray()
+  for (const a of commitments) if (!a.googleEventId) await pushCommitmentToGoogle(a)
+  // Also push any blocks that haven't reached Google yet.
+  const blocks = await db.blocks.toArray()
+  for (const b of blocks) if (!b.googleEventId && !b.done) await pushBlockToGoogle(b)
+}
+
 // ---- The chat tool executor: maps Claude's tool calls to the actions above,
 // and returns a confirmation strip for every write (§9). ----
 
@@ -448,6 +519,41 @@ export async function executeTool(
       return {
         content: JSON.stringify({ ok: true, unscheduledMinutes: unfit }),
         strip: strip('school', unfit > 0 ? 'Replanned the week (some work unscheduled)' : 'Replanned the week'),
+      }
+    }
+
+    case 'update_scheduling': {
+      const patch: Partial<Settings> = {}
+      if (input.blockLengthMinutes != null) patch.blockLengthMinutes = Number(input.blockLengthMinutes)
+      if (input.maxBlocksPerEvening != null)
+        patch.maxBlocksPerEvening = Number(input.maxBlocksPerEvening)
+      if (input.bufferDays != null) patch.bufferDays = Number(input.bufferDays)
+      await saveSettings(patch)
+      await planWeek() // re-apply the new rules across everything open
+      const bits: string[] = []
+      if (patch.blockLengthMinutes != null) bits.push(`${patch.blockLengthMinutes}-min sessions`)
+      if (patch.maxBlocksPerEvening != null) bits.push(`up to ${patch.maxBlocksPerEvening}/day`)
+      if (patch.bufferDays != null) bits.push(`${patch.bufferDays}-day buffer`)
+      return {
+        content: JSON.stringify({ ok: true }),
+        strip: strip('school', `Planning updated${bits.length ? ': ' + bits.join(', ') : ''}`),
+      }
+    }
+
+    case 'add_commitment': {
+      const days = Array.isArray(input.daysOfWeek)
+        ? (input.daysOfWeek as unknown[]).map((d) => Number(d))
+        : []
+      const a = await addCommitment({
+        label: String(input.label ?? 'Commitment'),
+        daysOfWeek: days,
+        startTime: String(input.startTime ?? '16:00'),
+        endTime: String(input.endTime ?? '17:00'),
+      })
+      await planWeek()
+      return {
+        content: JSON.stringify({ ok: true, id: a.id }),
+        strip: strip('charq', `Added commitment: ${a.label}`),
       }
     }
 

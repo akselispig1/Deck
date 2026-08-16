@@ -52,10 +52,9 @@ export function BlockRow({
       </span>
       {done ? (
         <svg
-          className="w-4 h-4 mr-3 shrink-0"
+          className="w-4 h-4 mr-3 shrink-0 text-moss"
           viewBox="0 0 16 16"
           fill="none"
-          style={{ color: laneVar('charq') }}
           aria-label="done"
         >
           <path
