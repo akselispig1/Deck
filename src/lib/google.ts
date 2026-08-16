@@ -208,11 +208,14 @@ function eventBody(block: Block, task: Task, course?: Course) {
     (new Date(block.end).getTime() - new Date(block.start).getTime()) / 60000,
   )
   const laneMeta = LANES[(course?.colorKey ?? task.lane) as Lane]
+  const deckLine = `Deck · due ${formatShortDate(task.dueAt)} · ${formatDuration(
+    durationMin,
+  )} of ${formatDuration(task.estMinutes)}`
   return {
     summary,
-    description: `Deck · due ${formatShortDate(task.dueAt)} · ${formatDuration(
-      durationMin,
-    )} of ${formatDuration(task.estMinutes)}`,
+    // The task's own description (e.g. a training session's details) comes
+    // first so it reads well in the calendar; Deck's metadata line follows.
+    description: task.notes?.trim() ? `${task.notes.trim()}\n\n${deckLine}` : deckLine,
     start: { dateTime: block.start },
     end: { dateTime: block.end },
     colorId: laneMeta.googleColorId,

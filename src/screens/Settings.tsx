@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useApp } from '../state/AppContext'
-import type { Availability } from '../types'
+import type { Availability, Course, Lane } from '../types'
 import { clearAnthropicKey, getAnthropicKey, setAnthropicKey } from '../lib/anthropic'
 import { getGoogleClientId, setGoogleClientId } from '../lib/google'
+import { LANE_ORDER, LANES, laneVar } from '../lib/lanes'
+import { CommitmentForm, DAY_LABEL, DAY_ORDER } from '../components/CommitmentForm'
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -12,10 +14,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </section>
   )
 }
-
-// Monday-first day chips; value is the JS getDay() index (0=Sun … 6=Sat).
-const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
-const DAY_LABEL: Record<number, string> = { 0: 'S', 1: 'M', 2: 'T', 3: 'W', 4: 'T', 5: 'F', 6: 'S' }
 
 function daysSummary(days: number[]): string {
   return DAY_ORDER.filter((d) => days.includes(d))
@@ -30,11 +28,9 @@ export function Settings() {
   const [clientDraft, setClientDraft] = useState(getGoogleClientId() ?? '')
   const [googleError, setGoogleError] = useState<string | null>(null)
 
-  // Commitment composer
-  const [cLabel, setCLabel] = useState('')
-  const [cDays, setCDays] = useState<Set<number>>(new Set())
-  const [cStart, setCStart] = useState('16:00')
-  const [cEnd, setCEnd] = useState('17:00')
+  // Subject composer
+  const [subjName, setSubjName] = useState('')
+  const [subjLane, setSubjLane] = useState<Lane>('school')
 
   function saveKey() {
     if (keyDraft.trim()) setAnthropicKey(keyDraft)
@@ -54,31 +50,15 @@ export function Settings() {
     }
   }
 
-  async function addCommitment() {
-    if (!cLabel.trim() || cDays.size === 0) return
-    await app.addCommitment({
-      label: cLabel,
-      daysOfWeek: [...cDays],
-      startTime: cStart,
-      endTime: cEnd,
-    })
-    setCLabel('')
-    setCDays(new Set())
-    setCStart('16:00')
-    setCEnd('17:00')
+  async function addSubject() {
+    if (!subjName.trim()) return
+    await app.addCourse({ name: subjName, colorKey: subjLane })
+    setSubjName('')
+    setSubjLane('school')
   }
 
-  const toggleDay = (d: number) =>
-    setCDays((prev) => {
-      const next = new Set(prev)
-      if (next.has(d)) next.delete(d)
-      else next.add(d)
-      return next
-    })
-
-  const sortedCommitments = [...app.availability].sort((a, b) =>
-    a.startTime.localeCompare(b.startTime),
-  )
+  const commitments = [...app.availability].sort((a, b) => a.startTime.localeCompare(b.startTime))
+  const courses = [...app.courses].sort((a, b) => a.name.localeCompare(b.name))
 
   return (
     <div className="pb-28 pt-8">
@@ -136,59 +116,45 @@ export function Settings() {
         )}
       </Section>
 
-      <Section title="Commitments">
+      <Section title="Subjects">
         <p className="mb-3 text-label text-graphite">
-          Recurring things that block study time and show on your calendar — clubs, training,
-          school, sleep.
+          Categories you can tag tasks with — school subjects, side projects, cycling, anything.
         </p>
 
-        {sortedCommitments.length > 0 && (
+        {courses.length > 0 && (
           <ul className="mb-4">
-            {sortedCommitments.map((a) => (
-              <CommitmentRow key={a.id} a={a} onDelete={() => app.deleteCommitment(a.id)} />
+            {courses.map((c) => (
+              <SubjectRow key={c.id} c={c} onDelete={() => app.deleteCourse(c.id)} />
             ))}
           </ul>
         )}
 
-        {/* Composer */}
         <div className="rounded-control border border-hairline p-3">
           <input
-            value={cLabel}
-            onChange={(e) => setCLabel(e.target.value)}
-            placeholder="Name (e.g. Chess club)"
+            value={subjName}
+            onChange={(e) => setSubjName(e.target.value)}
+            placeholder="Name (e.g. Cycling)"
             className="mb-3 w-full bg-transparent text-body text-ink placeholder:text-graphite focus:outline-none"
           />
-          <div className="mb-3 flex gap-1.5">
-            {DAY_ORDER.map((d) => (
-              <button
-                key={d}
-                onClick={() => toggleDay(d)}
-                className={`h-8 w-8 rounded-full text-label transition-colors ${
-                  cDays.has(d) ? 'bg-primary text-white' : 'border border-hairline text-graphite'
-                }`}
-              >
-                {DAY_LABEL[d]}
-              </button>
-            ))}
-          </div>
           <div className="flex items-center gap-2">
-            <input
-              type="time"
-              value={cStart}
-              onChange={(e) => setCStart(e.target.value)}
-              className="rounded-control border border-hairline bg-paper px-2 py-1.5 text-label text-ink focus:outline-none"
-            />
-            <span className="text-graphite">–</span>
-            <input
-              type="time"
-              value={cEnd}
-              onChange={(e) => setCEnd(e.target.value)}
-              className="rounded-control border border-hairline bg-paper px-2 py-1.5 text-label text-ink focus:outline-none"
-            />
+            <div className="flex flex-1 gap-2 overflow-x-auto">
+              {LANE_ORDER.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setSubjLane(l)}
+                  className={`shrink-0 rounded-full px-3 py-1.5 text-label transition-colors ${
+                    subjLane === l ? 'text-white' : 'border border-hairline text-graphite'
+                  }`}
+                  style={subjLane === l ? { backgroundColor: laneVar(l) } : undefined}
+                >
+                  {LANES[l].label}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={addCommitment}
-              disabled={!cLabel.trim() || cDays.size === 0}
-              className="ml-auto rounded-control bg-primary px-4 py-1.5 text-label font-medium text-white disabled:opacity-40"
+              onClick={addSubject}
+              disabled={!subjName.trim()}
+              className="rounded-control bg-primary px-4 py-1.5 text-label font-medium text-white disabled:opacity-40"
             >
               Add
             </button>
@@ -196,13 +162,58 @@ export function Settings() {
         </div>
       </Section>
 
+      <Section title="Commitments">
+        <p className="mb-3 text-label text-graphite">
+          Recurring things that block study time and show on your calendar — clubs, training,
+          school, sleep.
+        </p>
+
+        {commitments.length > 0 && (
+          <ul className="mb-4">
+            {commitments.map((a) => (
+              <CommitmentRow key={a.id} a={a} onDelete={() => app.deleteCommitment(a.id)} />
+            ))}
+          </ul>
+        )}
+
+        <CommitmentForm onAdd={app.addCommitment} />
+      </Section>
+
       <Section title="Planning">
         <p className="text-label text-graphite">
           Deck plans your study sessions automatically. To change how — shorter sessions, more per
-          day, a bigger buffer before deadlines — just tell the assistant in chat.
+          day, a bigger buffer before deadlines — just tell the assistant.
         </p>
       </Section>
     </div>
+  )
+}
+
+function DeleteButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-graphite hover:bg-hairline/50"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  )
+}
+
+function SubjectRow({ c, onDelete }: { c: Course; onDelete: () => void }) {
+  return (
+    <li className="flex items-center gap-3 border-b border-hairline py-2.5 last:border-b-0">
+      <span
+        aria-hidden
+        className="h-3 w-3 shrink-0 rounded-full"
+        style={{ backgroundColor: laneVar(c.colorKey) }}
+      />
+      <span className="min-w-0 flex-1 truncate text-body text-ink">{c.name}</span>
+      <DeleteButton label={`Remove ${c.name}`} onClick={onDelete} />
+    </li>
   )
 }
 
@@ -215,15 +226,7 @@ function CommitmentRow({ a, onDelete }: { a: Availability; onDelete: () => void 
           {daysSummary(a.daysOfWeek)} · {a.startTime}–{a.endTime}
         </span>
       </span>
-      <button
-        onClick={onDelete}
-        aria-label={`Remove ${a.label}`}
-        className="grid h-8 w-8 place-items-center rounded-full text-graphite hover:bg-hairline/50"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M6 6l12 12M18 6L6 18" />
-        </svg>
-      </button>
+      <DeleteButton label={`Remove ${a.label}`} onClick={onDelete} />
     </li>
   )
 }

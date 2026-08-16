@@ -407,6 +407,7 @@ export async function executeTool(
         type: (input.type as TaskType) ?? 'homework',
         dueAt: String(input.dueAt),
         estMinutes: Number(input.estMinutes ?? 40),
+        notes: input.notes ? String(input.notes) : undefined,
       })
       return {
         content: JSON.stringify({ ok: true, id: task.id }),
@@ -565,4 +566,35 @@ export async function executeTool(
 // Convenience used by the Add sheet's course pills etc.
 export async function getCourses(): Promise<Course[]> {
   return db.courses.toArray()
+}
+
+// ---- Subjects (courses) — user-adjustable in Settings ----
+
+export async function addCourse(input: {
+  name: string
+  short?: string
+  colorKey: Lane
+}): Promise<Course> {
+  const name = input.name.trim() || 'Subject'
+  const c: Course = {
+    id: newId(),
+    name,
+    short: (input.short?.trim() || name).slice(0, 10),
+    colorKey: input.colorKey,
+  }
+  await db.courses.add(c)
+  return c
+}
+
+export async function updateCourse(id: string, patch: Partial<Course>): Promise<void> {
+  const { id: _drop, ...rest } = patch
+  void _drop
+  await db.courses.update(id, rest)
+}
+
+export async function deleteCourse(id: string): Promise<void> {
+  // Leave any tasks tagged with this course untagged rather than deleting them.
+  const tagged = await db.tasks.where('courseId').equals(id).toArray()
+  await Promise.all(tagged.map((t) => db.tasks.update(t.id, { courseId: undefined })))
+  await db.courses.delete(id)
 }

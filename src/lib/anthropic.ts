@@ -59,6 +59,10 @@ export const TOOLS = [
           type: 'string',
           enum: ['homework', 'summative', 'formative', 'revision', 'admin'],
         },
+        notes: {
+          type: 'string',
+          description: 'Optional description / details for this task — shows in the calendar event.',
+        },
       },
       required: ['title', 'dueAt', 'estMinutes', 'lane', 'type'],
     },
@@ -232,6 +236,7 @@ export function buildSystemPrompt(s: StateSnapshot): string {
     'You can read and change tasks and the schedule using the provided tools. Prefer doing the work with tools over just describing it.',
     'The user changes how planning works by talking to you: use update_scheduling to adjust session length, sessions per day, or the buffer before deadlines whenever they ask for a different style. Use add_commitment for recurring things like clubs or training so study is planned around them.',
     'Tasks may carry a description (notes) and a deadline — use them to plan sensibly. When adding a task, schedule it (schedule_task) so it lands on the calendar.',
+    'To build a plan (e.g. a training plan leading up to a race), create one task per session, each with a clear notes description of what to do that session, and schedule each — the description then shows in the calendar event.',
     'When you change something, do it and then confirm briefly in one short, warm sentence — the UI already shows a confirmation strip for each change, so you do not need to restate every detail.',
     'Lanes are: school, charq, freelance, training. Times are local. Durations are in minutes.',
     'Never invent task or block ids — use the ones in the state below.',
