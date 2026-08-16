@@ -41,18 +41,22 @@ export interface Block {
 }
 
 export interface Availability {
-  // Recurring weekly template. Blocks of time the scheduler must NOT use.
+  // Recurring weekly commitment. Time the scheduler must NOT use — clubs, sleep,
+  // school, training. Pushed to Google Calendar as a recurring event so it shows
+  // in the embedded calendar too.
   id: string
-  label: string // "School", "Sleep", "Riding"
+  label: string // "School", "Sleep", "Chess club"
   daysOfWeek: number[] // 0-6, Sunday = 0
   startTime: string // "08:15"
   endTime: string // "15:30"
+  googleEventId?: string // set once pushed to Google Calendar
 }
 
 export interface Settings {
   id: 'settings' // single row
-  googleCalendarId?: string // which calendar to write blocks into
-  blockLengthMinutes: number // default 40
+  googleCalendarId?: string // the dedicated "Deck" calendar blocks are written to
+  googlePrimaryId?: string // the user's primary calendar id (email), for the embed
+  blockLengthMinutes: number // default 40 — adjusted by talking to the assistant
   maxBlocksPerEvening: number // default 3
   bufferDays: number // default 1
 }

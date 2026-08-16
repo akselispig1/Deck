@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useApp } from '../state/AppContext'
 import type { ChatMessage, ConfirmationStrip } from '../types'
-import { laneVar, laneVarAlpha } from '../lib/lanes'
+import { laneVar } from '../lib/lanes'
 
 const SUGGESTIONS = ['Plan my week', "I'm behind on chemistry", 'Move everything off Saturday']
 
@@ -25,8 +25,7 @@ export function Chat({ onOpenSettings }: { onOpenSettings: () => void }) {
         </p>
         <button
           onClick={onOpenSettings}
-          className="rounded-control px-5 py-3 text-label font-medium text-white"
-          style={{ backgroundColor: laneVar('school') }}
+          className="rounded-control bg-primary px-5 py-3 text-label font-medium text-white"
         >
           Open Settings
         </button>
@@ -96,8 +95,9 @@ export function Chat({ onOpenSettings }: { onOpenSettings: () => void }) {
             onClick={() => send(draft)}
             disabled={!draft.trim() || app.chatBusy}
             aria-label="Send"
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-control text-white transition-opacity disabled:opacity-30"
-            style={{ backgroundColor: draft.trim() ? laneVar('school') : laneVarAlpha('school', 0.4) }}
+            className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-white transition-colors disabled:opacity-40 ${
+              draft.trim() ? 'bg-primary' : 'bg-primary/40'
+            }`}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 19V5M5 12l7-7 7 7" />
@@ -113,10 +113,7 @@ function Message({ message }: { message: ChatMessage }) {
   if (message.role === 'user') {
     return (
       <div className="flex justify-end">
-        <div
-          className="max-w-[80%] rounded-[14px] px-3 py-2 text-body text-ink"
-          style={{ backgroundColor: laneVarAlpha('school', 0.08) }}
-        >
+        <div className="max-w-[80%] rounded-2xl bg-primary/10 px-3.5 py-2 text-body text-ink">
           {message.text}
         </div>
       </div>

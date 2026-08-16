@@ -108,9 +108,7 @@ export function Today({ onOpenChat }: { onOpenChat: () => void }) {
       {/* Date header */}
       <header className="mb-6">
         <p className="text-micro uppercase text-graphite">{formatDayName(now)}</p>
-        <p className="font-serif text-date leading-none text-ink tabular-nums">
-          {formatDayNumber(now)}
-        </p>
+        <p className="text-date leading-none text-ink tabular-nums">{formatDayNumber(now)}</p>
         <p className="text-label text-graphite">{formatMonth(now)}</p>
       </header>
 

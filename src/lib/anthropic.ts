@@ -152,6 +152,34 @@ export const TOOLS = [
       properties: { fromDate: { type: 'string' } },
     },
   },
+  {
+    name: 'update_scheduling',
+    description:
+      'Change how study time is planned when the user asks (e.g. shorter sessions, more per day, a bigger buffer before deadlines). Re-plans everything open. All fields optional.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        blockLengthMinutes: { type: 'number', description: 'Length of each study session, minutes' },
+        maxBlocksPerEvening: { type: 'number', description: 'Max sessions to place on one day' },
+        bufferDays: { type: 'number', description: 'Days to leave clear before a deadline' },
+      },
+    },
+  },
+  {
+    name: 'add_commitment',
+    description:
+      'Add a recurring weekly commitment that blocks time and shows on the calendar (a club, training, sleep…). Times are 24-hour HH:MM. daysOfWeek uses 0=Sunday … 6=Saturday.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string' },
+        daysOfWeek: { type: 'array', items: { type: 'number' } },
+        startTime: { type: 'string' },
+        endTime: { type: 'string' },
+      },
+      required: ['label', 'daysOfWeek', 'startTime', 'endTime'],
+    },
+  },
 ] as const
 
 // ---- System prompt: inject compact current state on every request (§9). ----
@@ -202,6 +230,8 @@ export function buildSystemPrompt(s: StateSnapshot): string {
     "You are the assistant inside Deck, a personal school planner for a 14-year-old IB MYP student who also runs two side projects (CharQ and freelance work) and trains.",
     'Deck answers one question: what should I work on right now. Keep the calendar calm and realistic.',
     'You can read and change tasks and the schedule using the provided tools. Prefer doing the work with tools over just describing it.',
+    'The user changes how planning works by talking to you: use update_scheduling to adjust session length, sessions per day, or the buffer before deadlines whenever they ask for a different style. Use add_commitment for recurring things like clubs or training so study is planned around them.',
+    'Tasks may carry a description (notes) and a deadline — use them to plan sensibly. When adding a task, schedule it (schedule_task) so it lands on the calendar.',
     'When you change something, do it and then confirm briefly in one short, warm sentence — the UI already shows a confirmation strip for each change, so you do not need to restate every detail.',
     'Lanes are: school, charq, freelance, training. Times are local. Durations are in minutes.',
     'Never invent task or block ids — use the ones in the state below.',

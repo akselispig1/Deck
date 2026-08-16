@@ -3,47 +3,47 @@
 @tailwind utilities;
 
 /*
-  Design tokens.  Colours are space-separated RGB triplets so Tailwind's
-  `rgb(var(--x) / <alpha-value>)` colours support the /opacity modifiers the
-  spec leans on (clay 8%, blocks 12%, done 50%).  Dark mode is a pure token
-  swap — no component needs a `dark:` variant.
+  Google-flavoured design tokens. Colours are space-separated RGB triplets so
+  Tailwind's `rgb(var(--x) / <alpha-value>)` colours support /opacity modifiers,
+  and dark mode is a pure token swap. Lane colours match Google Calendar's own
+  event palette so the app and the embedded calendar agree.
 */
 :root {
-  --paper: 250 249 246;
-  --card: 255 255 255;
-  --ink: 29 27 24;
-  --graphite: 107 101 92;
-  --hairline: 232 228 219;
-  --clay: 193 95 60;
-  --moss: 90 110 79;
+  --paper: 248 249 250; /* #F8F9FA  Google grey 50 — app background */
+  --card: 255 255 255; /*  #FFFFFF  raised surfaces */
+  --ink: 32 33 36; /*      #202124  primary text */
+  --graphite: 95 99 104; /* #5F6368 secondary text */
+  --hairline: 218 220 224; /* #DADCE0 dividers */
+  --primary: 26 115 232; /* #1A73E8  Google Blue — buttons, active states */
+  --moss: 30 142 62; /*     #1E8E3E  Google green — done / completion */
 
-  --school: 193 95 60;
-  --charq: 90 110 79;
-  --freelance: 74 96 114;
-  --training: 168 129 58;
+  /* Lane identity = Google Calendar event colours */
+  --school: 244 81 30; /*   #F4511E  Tangerine */
+  --charq: 51 182 121; /*   #33B679  Sage */
+  --freelance: 63 81 181; /* #3F51B5 Blueberry */
+  --training: 246 191 38; /* #F6BF26 Banana */
 
-  --todaycol: 255 253 248;
+  --todaycol: 232 240 254; /* #E8F0FE Google Blue 50 */
 
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: 23 22 19;
-    --card: 33 31 27;
-    --ink: 242 239 232;
-    --graphite: 154 146 136;
-    --hairline: 48 45 39;
+    --paper: 32 33 36; /*   #202124 */
+    --card: 48 49 52; /*    #303134 */
+    --ink: 232 234 237; /*  #E8EAED */
+    --graphite: 154 160 166; /* #9AA0A6 */
+    --hairline: 60 64 67; /* #3C4043 */
+    --primary: 138 180 248; /* #8AB4F8 */
+    --moss: 129 201 149; /* #81C995 */
 
-    /* Same hue, lifted ~8% in lightness */
-    --clay: 205 113 80;
-    --moss: 110 132 99;
-    --school: 205 113 80;
-    --charq: 110 132 99;
-    --freelance: 96 117 136;
-    --training: 190 151 82;
+    --school: 247 132 96;
+    --charq: 108 209 160;
+    --freelance: 126 138 214;
+    --training: 247 203 90;
 
-    --todaycol: 38 36 30;
+    --todaycol: 42 51 66;
 
     color-scheme: dark;
   }
@@ -59,25 +59,22 @@ body {
   margin: 0;
   background-color: rgb(var(--paper));
   color: rgb(var(--ink));
-  font-family: Inter, system-ui, sans-serif;
+  font-family: Roboto, system-ui, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* Every time or count is tabular */
   font-variant-numeric: tabular-nums;
   overscroll-behavior-y: none;
 }
 
-/* The layout is phone-shaped everywhere; kill horizontal scroll on the body. */
 #root {
   overflow-x: hidden;
 }
 
-/* Tap targets shouldn't flash a grey box on mobile */
 button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ---- The one piece of ambient motion: the Now card's draining bar ---- */
+/* ---- The Now card's draining bar (Today) ---- */
 @keyframes deck-drain {
   from {
     transform: scaleY(1);
@@ -87,7 +84,7 @@ button {
   }
 }
 
-/* ---- Completion: the row settles into the Done stack with a spring ---- */
+/* ---- Completion: row settles into the Done stack ---- */
 @keyframes deck-collapse {
   0% {
     max-height: 56px;
@@ -105,7 +102,6 @@ button {
     transform: translateY(0);
   }
 }
-
 .deck-completing {
   overflow: hidden;
   animation: deck-collapse 320ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -121,12 +117,10 @@ button {
     transform: translateY(0);
   }
 }
-
 .deck-settling {
   animation: deck-settle 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Sheets rise from the bottom */
 @keyframes deck-sheet-in {
   from {
     transform: translateY(100%);
@@ -136,7 +130,7 @@ button {
   }
 }
 .deck-sheet {
-  animation: deck-sheet-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: deck-sheet-in 240ms cubic-bezier(0.2, 0, 0, 1) both;
 }
 @keyframes deck-fade-in {
   from {
@@ -147,10 +141,9 @@ button {
   }
 }
 .deck-fade {
-  animation: deck-fade-in 180ms ease-out both;
+  animation: deck-fade-in 160ms ease-out both;
 }
 
-/* Honour the user's motion preference — no drain, no spring, no rise. */
 @media (prefers-reduced-motion: reduce) {
   .deck-completing,
   .deck-settling,
@@ -164,23 +157,21 @@ button {
   }
 }
 
-/* Thin, quiet scrollbars where they show at all */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgb(var(--hairline)) transparent;
 }
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-thumb {
   background-color: rgb(var(--hairline));
   border-radius: 999px;
 }
 
-/* Native date/time inputs should adopt the app's ink, not chrome blue */
 input[type='date'],
 input[type='time'] {
-  accent-color: rgb(var(--clay));
+  accent-color: rgb(var(--primary));
   color-scheme: light dark;
 }
