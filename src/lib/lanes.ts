@@ -11,19 +11,20 @@ export interface LaneMeta {
 
 // The four lanes share one timeline. Colours identify; they don't shout.
 export const LANES: Record<Lane, LaneMeta> = {
-  school: { key: 'school', label: 'School', token: 'school', googleColorId: '6' },
-  charq: { key: 'charq', label: 'CharQ', token: 'charq', googleColorId: '2' },
+  // googleColorId = the nearest Google Calendar event colour to each brand hue.
+  school: { key: 'school', label: 'School', token: 'school', googleColorId: '9' }, // Blueberry ≈ blue
+  charq: { key: 'charq', label: 'CharQ', token: 'charq', googleColorId: '2' }, // Sage ≈ green
   freelance: {
     key: 'freelance',
     label: 'Freelance',
     token: 'freelance',
-    googleColorId: '9',
+    googleColorId: '11', // Tomato ≈ red
   },
   training: {
     key: 'training',
     label: 'Training',
     token: 'training',
-    googleColorId: '5',
+    googleColorId: '5', // Banana ≈ yellow
   },
 }
 

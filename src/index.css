@@ -17,11 +17,11 @@
   --primary: 26 115 232; /* #1A73E8  Google Blue — buttons, active states */
   --moss: 30 142 62; /*     #1E8E3E  Google green — done / completion */
 
-  /* Lane identity = Google Calendar event colours */
-  --school: 244 81 30; /*   #F4511E  Tangerine */
-  --charq: 51 182 121; /*   #33B679  Sage */
-  --freelance: 63 81 181; /* #3F51B5 Blueberry */
-  --training: 246 191 38; /* #F6BF26 Banana */
+  /* Lane identity = Google's exact brand colours */
+  --school: 66 133 244; /*   #4285F4  Google Blue */
+  --charq: 52 168 83; /*     #34A853  Google Green */
+  --freelance: 234 67 53; /* #EA4335  Google Red */
+  --training: 251 188 4; /*  #FBBC04  Google Yellow */
 
   --todaycol: 232 240 254; /* #E8F0FE Google Blue 50 */
 
@@ -38,10 +38,11 @@
     --primary: 138 180 248; /* #8AB4F8 */
     --moss: 129 201 149; /* #81C995 */
 
-    --school: 247 132 96;
-    --charq: 108 209 160;
-    --freelance: 126 138 214;
-    --training: 247 203 90;
+    /* Google's dark-theme accent tints */
+    --school: 138 180 248; /*   #8AB4F8 */
+    --charq: 129 201 149; /*    #81C995 */
+    --freelance: 242 139 130; /* #F28B82 */
+    --training: 253 214 99; /*  #FDD663 */
 
     --todaycol: 42 51 66;
 
