@@ -105,6 +105,58 @@ export function disconnectCalendar(): void {
   state.expiresAt = 0
 }
 
+// Try to get an access token with NO user interaction — works when the user is
+// signed into Google in this browser and has already granted access. Used to
+// restore the in-memory token after a reload/expiry so edits keep syncing.
+export async function trySilentConnect(): Promise<boolean> {
+  const clientId = getGoogleClientId()
+  if (!clientId) return false
+  try {
+    await loadGis()
+  } catch {
+    return false
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const google = (window as any).google
+  if (!google?.accounts?.oauth2) return false
+  return new Promise<boolean>((resolve) => {
+    let settled = false
+    const done = (v: boolean) => {
+      if (!settled) {
+        settled = true
+        resolve(v)
+      }
+    }
+    try {
+      state.tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: SCOPE,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        callback: (resp: any) => {
+          if (resp?.error || !resp?.access_token) {
+            done(false)
+            return
+          }
+          state.accessToken = resp.access_token
+          state.expiresAt = Date.now() + (resp.expires_in ?? 3600) * 1000 - 60_000
+          done(true)
+        },
+        error_callback: () => done(false),
+      })
+      state.tokenClient.requestAccessToken({ prompt: 'none' })
+      setTimeout(() => done(false), 4000) // safety net if neither callback fires
+    } catch {
+      done(false)
+    }
+  })
+}
+
+// Ensure we hold a valid token, refreshing silently if the in-memory one lapsed.
+export async function ensureToken(): Promise<boolean> {
+  if (isCalendarConnected()) return true
+  return trySilentConnect()
+}
+
 async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (!isCalendarConnected()) throw new Error('Calendar not connected')
   const res = await fetch(`${CAL_API}${path}`, {

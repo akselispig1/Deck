@@ -17,6 +17,7 @@ import { buildSystemPrompt, hasAnthropicKey, runAssistant } from '../lib/anthrop
 import {
   connectCalendar,
   disconnectCalendar,
+  ensureToken,
   isCalendarConfigured,
   isCalendarConnected,
 } from '../lib/google'
@@ -98,6 +99,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const seeded = await seedIfEmpty()
       if (seeded) await store.planWeek()
     })()
+  }, [])
+
+  // Restore the Google token silently after a reload/expiry, so deletes and
+  // edits keep reaching Google (the embed alone uses the browser's login).
+  useEffect(() => {
+    if (!isCalendarConfigured()) return
+    let cancelled = false
+    void ensureToken().then((ok) => {
+      if (ok && !cancelled) setCalendarConnected(true)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   // A coarse clock for the date header and the week's current-time line. The

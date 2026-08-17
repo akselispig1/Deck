@@ -7,8 +7,8 @@ import {
   createRecurringCommitment,
   deleteEvent,
   ensureDeckCalendar,
+  ensureToken,
   getPrimaryCalendarId,
-  isCalendarConnected,
   updateEvent,
 } from '../lib/google'
 import type { Availability, Settings } from '../types'
@@ -28,7 +28,7 @@ import type { ConfirmationStrip } from '../types'
 // ---- Google Calendar sync (best-effort; silent no-op when disconnected) ----
 
 async function pushBlockToGoogle(block: Block): Promise<void> {
-  if (!isCalendarConnected()) return
+  if (!(await ensureToken())) return
   try {
     const settings = await getSettings()
     const calId = await ensureDeckCalendar(settings.googleCalendarId)
@@ -44,7 +44,8 @@ async function pushBlockToGoogle(block: Block): Promise<void> {
 }
 
 async function removeBlockFromGoogle(block: Block): Promise<void> {
-  if (!block.googleEventId || !isCalendarConnected()) return
+  if (!block.googleEventId) return
+  if (!(await ensureToken())) return
   try {
     const settings = await getSettings()
     if (settings.googleCalendarId) {
@@ -207,7 +208,7 @@ export async function moveBlock(id: string, startISO: string): Promise<void> {
   await db.blocks.update(id, { start: toISO(start), end: toISO(end) })
 
   // Keep Google in sync: patch if we already pushed it, else create.
-  if (isCalendarConnected()) {
+  if (await ensureToken()) {
     const updated = await db.blocks.get(id)
     if (updated) {
       if (updated.googleEventId) {
@@ -298,7 +299,7 @@ export async function buildSnapshot(): Promise<StateSnapshot> {
 // ---- Commitments (recurring weekly busy time: clubs, sleep, school…) ----
 
 async function pushCommitmentToGoogle(a: Availability): Promise<void> {
-  if (!isCalendarConnected()) return
+  if (!(await ensureToken())) return
   try {
     const settings = await getSettings()
     const calId = await ensureDeckCalendar(settings.googleCalendarId)
@@ -337,7 +338,7 @@ export async function addCommitment(input: {
 export async function deleteCommitment(id: string): Promise<void> {
   const a = await db.availability.get(id)
   if (!a) return
-  if (a.googleEventId && isCalendarConnected()) {
+  if (a.googleEventId && (await ensureToken())) {
     try {
       const s = await getSettings()
       if (s.googleCalendarId) await deleteEvent(s.googleCalendarId, a.googleEventId)
