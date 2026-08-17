@@ -26,13 +26,24 @@ export function CalendarView({ onOpenSettings }: { onOpenSettings: () => void })
     return () => clearTimeout(t)
   }, [app.blocks.length, app.availability.length])
 
-  // Refresh when the app regains focus (e.g. back from Google).
+  // Keep the embed fresh against changes made in Google Calendar itself: reload
+  // when the app regains focus/visibility (e.g. back from the Google app) and on
+  // a gentle interval while visible. The embed is a static snapshot otherwise.
   useEffect(() => {
+    const reload = () => setNonce(Date.now())
     const onVis = () => {
-      if (document.visibilityState === 'visible') setNonce(Date.now())
+      if (document.visibilityState === 'visible') reload()
     }
     document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
+    window.addEventListener('focus', reload)
+    const iv = setInterval(() => {
+      if (document.visibilityState === 'visible') reload()
+    }, 30_000)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      window.removeEventListener('focus', reload)
+      clearInterval(iv)
+    }
   }, [])
 
   const src = useMemo(() => {
